@@ -49,66 +49,82 @@ class AddStakeProcessor(TransactionsProcessor):
             # Parse AddStakeEvent struct
             for event_index, event in enumerate(user_transaction.events):
                 # Skip events that don't match our filter criteria
-                print("being transaction loop")
+                sequence_number = event.sequence_number
                 print(event.type_str)
+              
                 if not AddStakeProcessor.included_event_type(event.type_str):
                     continue
+                else:
+                    print("we have a match")
 
-                print("we have a match")
+
+                print(event)
 
                 creation_number = event.key.creation_number
                 sequence_number = event.sequence_number
-                account_address = general_utils.standardize_address(
-                    event.key.account_address
-                )
+                print(creation_number)
+                # account_address = general_utils.standardize_address(
+                #     event.key.account_address
+                # )
+        #         pool_address = general_utils.standardize_address(
+        #              event.pool_address                 )
+        #         # delegator_address = general_utils.standardize_address(
+        #         #     event.key.delegator_address
+        #         # )
+        #         # amount_added = int(data["amount_added"])
+        #         # add_stake_fee = int(data["add_stake_fee"])
+               
 
-                # Convert your on-chain data scheme to database-friendly values
-                # Our on-chain struct looks like this:
-                #   struct CoinFlipEvent has copy, drop, store {
-                #       prediction: bool,
-                #       result: bool,
-                #       timestamp: u64,
-                #   }
-                # These values are stored in the `data` field of the event as JSON fields/values
-                # Load the data into a json object and then use it as a regular dictionary
-                data = json.loads(event.data)
-                print("===============")
-                print (data)
-                # prediction = bool(data["prediction"])
-                # result = bool(data["result"])
-                # wins = int(data["wins"])
-                # losses = int(data["losses"])
+        #         # Convert your on-chain data scheme to database-friendly values
+        #         # Our on-chain struct looks like this:
+        #         #   struct CoinFlipEvent has copy, drop, store {
+        #         #       prediction: bool,
+        #         #       result: bool,
+        #         #       timestamp: u64,
+        #         #   }
+        #         # These values are stored in the `data` field of the event as JSON fields/values
+        #         # Load the data into a json object and then use it as a regular dictionary
+        #         data = json.loads(event.data)
 
-                # We have extra data to insert into the database, because we want to process our data.
-                # Calculate the total
-                # win_percentage = wins / (wins + losses)
+        #         # prediction = bool(data["prediction"])
+        #         # result = bool(data["result"])
+        #         # wins = int(data["wins"])
+        #         # losses = int(data["losses"])
 
-                # Create an instance of AddStakeEvent
-                event_db_obj = AddStakeEvent(
-                    sequence_number=sequence_number,
-                    creation_number=creation_number,
-                    account_address=account_address,
-                    transaction_version=transaction_version,
-                    transaction_timestamp=transaction_timestamp,
-                    # losses=losses,
-                    # prediction=prediction,
-                    # result=result,
-                    # wins=wins,
-                    # win_percentage=win_percentage,
-                    event_index=event_index,  # when multiple events of the same type are emitted in a single transaction, this is the index of the event in the transaction
-                )
-                event_db_objs.append(event_db_obj)
+        #         # We have extra data to insert into the database, because we want to process our data.
+        #         # Calculate the total
+        #         # win_percentage = wins / (wins + losses)
 
-        processing_duration_in_secs = perf_counter() - start_time
-        start_time = perf_counter()
-        self.insert_to_db(event_db_objs)
-        db_insertion_duration_in_secs = perf_counter() - start_time
-        return ProcessingResult(
-            start_version=start_version,
-            end_version=end_version,
-            processing_duration_in_secs=processing_duration_in_secs,
-            db_insertion_duration_in_secs=db_insertion_duration_in_secs,
-        )
+        #         # Create an instance of AddStakeEvent
+        #         event_db_obj = AddStakeEvent(
+        #             sequence_number=sequence_number,
+        #             creation_number=creation_number,
+        #             pool_address=pool_address,
+        #             # delegator_address=delegator_address,
+        #             # amount_added=amount_added,
+        #             # add_stake_fee=add_stake_fee,   
+        #             transaction_version=transaction_version,
+        #             transaction_timestamp=transaction_timestamp,
+        #             # losses=losses,
+        #             # prediction=prediction,
+        #             # result=result,
+        #             # wins=wins,
+        #             # win_percentage=win_percentage,
+        #             event_index=event_index,  # when multiple events of the same type are emitted in a single transaction, this is the index of the event in the transaction
+        #         )
+        #         event_db_objs.append(event_db_obj)
+
+        # processing_duration_in_secs = perf_counter() - start_time
+        # start_time = perf_counter()
+        # self.insert_to_db(event_db_objs)
+        # db_insertion_duration_in_secs = perf_counter() - start_time
+        # return ProcessingResult(
+        #     start_version=start_version,
+        #     end_version=end_version,
+        #     processing_duration_in_secs=processing_duration_in_secs,
+        #     db_insertion_duration_in_secs=db_insertion_duration_in_secs,
+        # )
+        
 
     def insert_to_db(self, parsed_objs: List[AddStakeEvent]) -> None:
         with Session() as session, session.begin():
@@ -121,14 +137,14 @@ class AddStakeProcessor(TransactionsProcessor):
         module_address = general_utils.standardize_address(parsed_tag[0])
         module_name = parsed_tag[1]
         event_type = parsed_tag[2]
+        # print(module_name)
+        # print(event_type)
         # Now we can filter out events that are not of type AddStakeEvent
         # We can filter by the module address, module name, and event type
         # If someone deploys a different version of our contract with the same event type, we may want to index it one day.
         # So we could only check the event type instead of the full string
         # For our sake, check the full string
         return (
-            module_address == MODULE_ADDRESS
-            and module_name == "add_stake"
-            and event_type == "AddStakeEvent"
+            module_name == "delegation_pool" and event_type == "DistributeCommission"
         )
 
