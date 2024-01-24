@@ -6,7 +6,8 @@ from utils.models.annotated_types import (
     BigIntegerPrimaryKeyType,
     InsertedAtType,
     TimestampType,
-    NumericType,
+    StringType,
+    NumericType
 )
 from utils.models.general_models import Base
 from utils.models.schema_names import ADD_STAKE_SCHEMA_NAME
@@ -18,8 +19,8 @@ class AddStakeEvent(Base):
 
     sequence_number: BigIntegerPrimaryKeyType
     creation_number: BigIntegerPrimaryKeyType
-    pool_address: StringPrimaryKeyType
-    delegator_address: StringPrimaryKeyType
+    pool_address: StringType
+    delegator_address: StringType
     amount_added: BigIntegerType
     add_stake_fee: BigIntegerType
     transaction_version: BigIntegerType

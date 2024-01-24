@@ -16,7 +16,6 @@ MODULE_ADDRESS = general_utils.standardize_address(
     "0x9bfd93ebaa1efd65515642942a607eeca53a0188c04c21ced646d2f0b9f551e8"
 )
 
-
 class AddStakeProcessor(TransactionsProcessor):
     def name(self) -> str:
         return ProcessorName.ADD_STAKE.value
@@ -59,52 +58,25 @@ class AddStakeProcessor(TransactionsProcessor):
                 except:
                         print("we have a match")
                         print(event.type_str)
-                        
-
-                logging.error(event.type_str)
-                logging.error(event)
-
-                creation_number = event.key.creation_number
-                sequence_number = event.sequence_number
-                print(creation_number)
-                account_address = general_utils.standardize_address(
-                     event.delegation_pool.account_address
-                )
-                pool_address = general_utils.standardize_address(
-                     event.delegation_pool.pool_address
-                 )
-                delegator_address = general_utils.standardize_address(
-                     event.key.delegator_address
-                )
-                amount_added = int(data["amount_added"])
-                add_stake_fee = int(data["add_stake_fee"])
-               
-
-                # Convert your on-chain data scheme to database-friendly values
-                # Our on-chain struct looks like this:
-                #   struct CoinFlipEvent has copy, drop, store {
-                #       prediction: bool,
-                #       result: bool,
-                #       timestamp: u64,
-                #   }
-                # These values are stored in the `data` field of the event as JSON fields/values
-                # Load the data into a json object and then use it as a regular dictionary
+                addr = general_utils.standardize_address(event.key.account_address)
+   
+                #logging.error(event.type_str)
+                #logging.error(event)
+                #logging.error(event.data)
                 data = json.loads(event.data)
 
-                # prediction = bool(data["prediction"])
-                # result = bool(data["result"])
-                # wins = int(data["wins"])
-                # losses = int(data["losses"])
+                creation_number = event.key.creation_number
+                sequence_number = event.sequence_number    
+                amount_added = int(data["amount_added"])
+                add_stake_fee = int(data["add_stake_fee"])
+                delegator_address = general_utils.standardize_address(data["delegator_address"])
+                pool_address = general_utils.standardize_address(data["pool_address"])
 
-                # We have extra data to insert into the database, because we want to process our data.
-                # Calculate the total
-                # win_percentage = wins / (wins + losses)
 
                 # Create an instance of AddStakeEvent
                 event_db_obj = AddStakeEvent(
                     sequence_number=sequence_number,
                     creation_number=creation_number,
-                    account_address=account_address,
                     pool_address=pool_address,
                     delegator_address=delegator_address,
                     amount_added=amount_added,
@@ -113,6 +85,7 @@ class AddStakeProcessor(TransactionsProcessor):
                     transaction_timestamp=transaction_timestamp,
                     event_index=event_index,  # when multiple events of the same type are emitted in a single transaction, this is the index of the event in the transaction
                 )
+                logging.error(event_db_obj.delegator_address)
                 event_db_objs.append(event_db_obj)
 
         processing_duration_in_secs = perf_counter() - start_time
@@ -137,8 +110,7 @@ class AddStakeProcessor(TransactionsProcessor):
         module_address = general_utils.standardize_address(parsed_tag[0])
         module_name = parsed_tag[1]
         event_type = parsed_tag[2]
-        # print(module_name)
-        # print(event_type)
+
         # Now we can filter out events that are not of type AddStakeEvent
         # We can filter by the module address, module name, and event type
         # If someone deploys a different version of our contract with the same event type, we may want to index it one day.
