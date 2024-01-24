@@ -44,12 +44,17 @@ class AddStakeProcessor(TransactionsProcessor):
                 transaction.timestamp
             )
             user_transaction = transaction.user
+ 
 
             # Parse AddStakeEvent struct
             for event_index, event in enumerate(user_transaction.events):
                 # Skip events that don't match our filter criteria
+                print("being transaction loop")
+                print(event.type_str)
                 if not AddStakeProcessor.included_event_type(event.type_str):
                     continue
+
+                print("we have a match")
 
                 creation_number = event.key.creation_number
                 sequence_number = event.sequence_number
@@ -67,14 +72,16 @@ class AddStakeProcessor(TransactionsProcessor):
                 # These values are stored in the `data` field of the event as JSON fields/values
                 # Load the data into a json object and then use it as a regular dictionary
                 data = json.loads(event.data)
-                prediction = bool(data["prediction"])
-                result = bool(data["result"])
-                wins = int(data["wins"])
-                losses = int(data["losses"])
+                print("===============")
+                print (data)
+                # prediction = bool(data["prediction"])
+                # result = bool(data["result"])
+                # wins = int(data["wins"])
+                # losses = int(data["losses"])
 
                 # We have extra data to insert into the database, because we want to process our data.
                 # Calculate the total
-                win_percentage = wins / (wins + losses)
+                # win_percentage = wins / (wins + losses)
 
                 # Create an instance of AddStakeEvent
                 event_db_obj = AddStakeEvent(
@@ -83,11 +90,11 @@ class AddStakeProcessor(TransactionsProcessor):
                     account_address=account_address,
                     transaction_version=transaction_version,
                     transaction_timestamp=transaction_timestamp,
-                    losses=losses,
-                    prediction=prediction,
-                    result=result,
-                    wins=wins,
-                    win_percentage=win_percentage,
+                    # losses=losses,
+                    # prediction=prediction,
+                    # result=result,
+                    # wins=wins,
+                    # win_percentage=win_percentage,
                     event_index=event_index,  # when multiple events of the same type are emitted in a single transaction, this is the index of the event in the transaction
                 )
                 event_db_objs.append(event_db_obj)
