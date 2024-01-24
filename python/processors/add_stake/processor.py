@@ -51,29 +51,33 @@ class AddStakeProcessor(TransactionsProcessor):
             for event_index, event in enumerate(user_transaction.events):
                 # Skip events that don't match our filter criteria
                 sequence_number = event.sequence_number
-                print(event.type_str)
+                logging.info(event.type_str)
               
-                if not AddStakeProcessor.included_event_type(event.type_str):
-                    continue
-                else:
-                    print("we have a match")
+                try:
+                    if not AddStakeProcessor.included_event_type(event.type_str):
+                        continue
+                except:
+                        print("we have a match")
+                        print(event.type_str)
+                        
 
-                logging.warning(event.type_str)
+                logging.error(event.type_str)
+                logging.error(event)
 
                 creation_number = event.key.creation_number
                 sequence_number = event.sequence_number
                 print(creation_number)
-                # account_address = general_utils.standardize_address(
-                #     event.key.account_address
-                # )
+                account_address = general_utils.standardize_address(
+                     event.delegation_pool.account_address
+                )
                 pool_address = general_utils.standardize_address(
-                     event.key.pool_address
+                     event.delegation_pool.pool_address
                  )
-                # delegator_address = general_utils.standardize_address(
-                #     event.key.delegator_address
-                # )
-                # amount_added = int(data["amount_added"])
-                # add_stake_fee = int(data["add_stake_fee"])
+                delegator_address = general_utils.standardize_address(
+                     event.key.delegator_address
+                )
+                amount_added = int(data["amount_added"])
+                add_stake_fee = int(data["add_stake_fee"])
                
 
                 # Convert your on-chain data scheme to database-friendly values
@@ -100,17 +104,13 @@ class AddStakeProcessor(TransactionsProcessor):
                 event_db_obj = AddStakeEvent(
                     sequence_number=sequence_number,
                     creation_number=creation_number,
+                    account_address=account_address,
                     pool_address=pool_address,
-                    # delegator_address=delegator_address,
-                    # amount_added=amount_added,
-                    # add_stake_fee=add_stake_fee,   
+                    delegator_address=delegator_address,
+                    amount_added=amount_added,
+                    add_stake_fee=add_stake_fee,   
                     transaction_version=transaction_version,
                     transaction_timestamp=transaction_timestamp,
-                    # losses=losses,
-                    # prediction=prediction,
-                    # result=result,
-                    # wins=wins,
-                    # win_percentage=win_percentage,
                     event_index=event_index,  # when multiple events of the same type are emitted in a single transaction, this is the index of the event in the transaction
                 )
                 event_db_objs.append(event_db_obj)
@@ -145,6 +145,6 @@ class AddStakeProcessor(TransactionsProcessor):
         # So we could only check the event type instead of the full string
         # For our sake, check the full string
         return (
-            module_name == "delegation_pool" and event_type == "DistributeCommission"
+            module_name == "delegation_pool" and event_type == "AddStakeEvent"
         )
 
