@@ -48,7 +48,7 @@ class AddStakeProcessor(TransactionsProcessor):
             # Parse AddStakeEvent struct
             for event_index, event in enumerate(user_transaction.events):
                 # Skip events that don't match our filter criteria
-                if not CoinFlipProcessor.included_event_type(event.type_str):
+                if not AddStakeProcessor.included_event_type(event.type_str):
                     continue
 
                 creation_number = event.key.creation_number
