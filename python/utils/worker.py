@@ -25,7 +25,7 @@ from processors.example_event_processor.processor import ExampleEventProcessor
 from processors.nft_orderbooks.nft_marketplace_processor import NFTMarketplaceProcesser
 from processors.nft_marketplace_v2.processor import NFTMarketplaceV2Processor
 from processors.coin_flip.processor import CoinFlipProcessor
-from processors.add_stake.processor import AddStakeProcessor
+from processors.delegation_pool.processor import AddDelegationProcessor
 from processors.aptos_ambassador_token.processor import AptosAmbassadorTokenProcessor
 import asyncio
 import logging
@@ -479,8 +479,8 @@ class IndexerProcessorServer:
                 self.processor = NFTMarketplaceV2Processor(processor_config)
             case ProcessorName.COIN_FLIP.value:
                 self.processor = CoinFlipProcessor()
-            case ProcessorName.ADD_STAKE.value:
-                self.processor = AddStakeProcessor()  
+            case ProcessorName.DELEGATION_POOL.value:
+                self.processor = AddDelegationProcessor()  
             case ProcessorName.EXAMPLE_AMBASSADOR_TOKEN_PROCESSOR.value:
                 self.processor = AptosAmbassadorTokenProcessor()
             case _:

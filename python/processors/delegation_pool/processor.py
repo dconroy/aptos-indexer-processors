@@ -1,10 +1,10 @@
 from aptos_protos.aptos.transaction.v1 import transaction_pb2
-from processors.add_stake.models import AddStakeEvent
+from processors.delegation_pool.models import AddDelegationEvent
 from typing import List
 from utils.transactions_processor import ProcessingResult
 from utils import general_utils
 from utils.transactions_processor import TransactionsProcessor
-from utils.models.schema_names import ADD_STAKE_SCHEMA_NAME
+from utils.models.schema_names import DELEGATION_POOL_SCHEMA_NAME
 from utils.session import Session
 from utils.processor_name import ProcessorName
 import json
@@ -16,12 +16,12 @@ MODULE_ADDRESS = general_utils.standardize_address(
     "0x9bfd93ebaa1efd65515642942a607eeca53a0188c04c21ced646d2f0b9f551e8"
 )
 
-class AddStakeProcessor(TransactionsProcessor):
+class AddDelegationProcessor(TransactionsProcessor):
     def name(self) -> str:
-        return ProcessorName.ADD_STAKE.value
+        return ProcessorName.DELEGATION_POOL.value
 
     def schema(self) -> str:
-        return ADD_STAKE_SCHEMA_NAME
+        return DELEGATION_POOL_SCHEMA_NAME
 
     def process_transactions(
         self,
@@ -29,7 +29,7 @@ class AddStakeProcessor(TransactionsProcessor):
         start_version: int,
         end_version: int,
     ) -> ProcessingResult:
-        event_db_objs: List[AddStakeEvent] = []
+        event_db_objs: List[AddDelegationEvent] = []
         start_time = perf_counter()
         for transaction in transactions:
             # Custom filtering
@@ -46,46 +46,77 @@ class AddStakeProcessor(TransactionsProcessor):
             user_transaction = transaction.user
  
 
-            # Parse AddStakeEvent struct
+            # Parse AddDelegationEvent struct
             for event_index, event in enumerate(user_transaction.events):
                 # Skip events that don't match our filter criteria
                 sequence_number = event.sequence_number
                 logging.info(event.type_str)
               
                 try:
-                    if not AddStakeProcessor.included_event_type(event.type_str):
+                    if not AddDelegationProcessor.included_event_type(event.type_str):
                         continue
                 except:
-                        print("we have a match")
+                        #print("we have a match")
                         print(event.type_str)
                 addr = general_utils.standardize_address(event.key.account_address)
    
-                #logging.error(event.type_str)
-                #logging.error(event)
-                #logging.error(event.data)
+
                 data = json.loads(event.data)
-
+                parsed_call = event.type_str.split("::")
+                try:
+                    event_type = parsed_call[2]
+                except Exception as e:
+                # event_type = ''
+                    logging.error(f"JSON parsing failed for event data: {event.data}, Error: {e}")
+                    continue
+                   
                 creation_number = event.key.creation_number
-                sequence_number = event.sequence_number    
-                amount_added = int(data["amount_added"])
-                add_stake_fee = int(data["add_stake_fee"])
-                delegator_address = general_utils.standardize_address(data["delegator_address"])
-                pool_address = general_utils.standardize_address(data["pool_address"])
+                sequence_number = event.sequence_number 
+
+                try:
+                    delegator_address = general_utils.standardize_address(data["delegator_address"])
+                except Exception as e:
+                    # Log the error and the raw event data when JSON loading fails
+                    # event_type = ''
+                        logging.error(f"DELEGATION ADDRESS for event data: {event.data}, Error: {e}")
+                        continue
+
+                    
+                try:
+                    pool_address = general_utils.standardize_address(data["pool_address"])
+                except Exception as e:
+                # Log the error and the raw event data when JSON loading fails
+                # event_type = ''
+                    logging.error(f"POOL ADDRESS JSON parsing failed for event data: {event.data}, Error: {e}")
+                    continue
+                
+                #function specific calls
+                amount_added = int(data.get("amount_added", 0))
+                amount_unlocked = int(data.get("amount_unlocked", 0))
+                amount_reactivated = int(data.get("amount_reactivated", 0))
+                amount_withdrawn = int(data.get("amount_withdrawn", 0))
+                add_stake_fee = int(data.get("add_stake_fee", 0))
 
 
-                # Create an instance of AddStakeEvent
-                event_db_obj = AddStakeEvent(
+
+
+                # Create an instance of AddDelegationEvent
+                event_db_obj = AddDelegationEvent(
                     sequence_number=sequence_number,
                     creation_number=creation_number,
                     pool_address=pool_address,
                     delegator_address=delegator_address,
                     amount_added=amount_added,
-                    add_stake_fee=add_stake_fee,   
+                    add_stake_fee=add_stake_fee,
+                    amount_unlocked=amount_unlocked,
+                    amount_reactivated=amount_reactivated,
+                    amount_withdrawn=amount_withdrawn,
+                    event_type=event_type,   
                     transaction_version=transaction_version,
                     transaction_timestamp=transaction_timestamp,
                     event_index=event_index,  # when multiple events of the same type are emitted in a single transaction, this is the index of the event in the transaction
                 )
-                logging.error(event_db_obj.delegator_address)
+                
                 event_db_objs.append(event_db_obj)
 
         processing_duration_in_secs = perf_counter() - start_time
@@ -99,7 +130,7 @@ class AddStakeProcessor(TransactionsProcessor):
             db_insertion_duration_in_secs=db_insertion_duration_in_secs,
         )
 
-    def insert_to_db(self, parsed_objs: List[AddStakeEvent]) -> None:
+    def insert_to_db(self, parsed_objs: List[AddDelegationEvent]) -> None:
         with Session() as session, session.begin():
             for obj in parsed_objs:
                 session.merge(obj)
@@ -111,12 +142,19 @@ class AddStakeProcessor(TransactionsProcessor):
         module_name = parsed_tag[1]
         event_type = parsed_tag[2]
 
-        # Now we can filter out events that are not of type AddStakeEvent
+        # Now we can filter out events that are not of type delegation pool
         # We can filter by the module address, module name, and event type
         # If someone deploys a different version of our contract with the same event type, we may want to index it one day.
         # So we could only check the event type instead of the full string
         # For our sake, check the full string
         return (
-            module_name == "delegation_pool" and event_type == "AddStakeEvent"
+            module_name == "delegation_pool" and 
+            (
+                event_type == "AddStakeEvent" or 
+                event_type == "ReactivateStakeEvent" or
+                event_type == "UnlockStakeEvent" or
+                event_type == "WithdrawStakeEvent" 
+             
+            ) 
         )
 
