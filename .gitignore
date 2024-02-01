@@ -1,6 +1,7 @@
 config.yaml
 cursor.txt
 build
+.env
 node_modules/
 
 # Rust specific ignores
