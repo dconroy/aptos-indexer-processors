@@ -55,40 +55,25 @@ class AddDelegationProcessor(TransactionsProcessor):
                 try:
                     if not AddDelegationProcessor.included_event_type(event.type_str):
                         continue
-                except:
-                        #print("we have a match")
-                        print(event.type_str)
-                addr = general_utils.standardize_address(event.key.account_address)
-   
+                except Exception as e:
+                        logging.error(f"Error Checking Event Type String: {event.data}, Error: {e}")
+                        continue
+               
 
                 data = json.loads(event.data)
                 parsed_call = event.type_str.split("::")
                 try:
                     event_type = parsed_call[2]
                 except Exception as e:
-                # event_type = ''
                     logging.error(f"JSON parsing failed for event data: {event.data}, Error: {e}")
                     continue
                    
                 creation_number = event.key.creation_number
                 sequence_number = event.sequence_number 
-
-                try:
-                    delegator_address = general_utils.standardize_address(data["delegator_address"])
-                except Exception as e:
-                    # Log the error and the raw event data when JSON loading fails
-                    # event_type = ''
-                        logging.error(f"DELEGATION ADDRESS for event data: {event.data}, Error: {e}")
-                        continue
-
+                delegator_address = general_utils.standardize_address(data["delegator_address"])
+            
                     
-                try:
-                    pool_address = general_utils.standardize_address(data["pool_address"])
-                except Exception as e:
-                # Log the error and the raw event data when JSON loading fails
-                # event_type = ''
-                    logging.error(f"POOL ADDRESS JSON parsing failed for event data: {event.data}, Error: {e}")
-                    continue
+                pool_address = general_utils.standardize_address(data["pool_address"])
                 
                 #function specific calls
                 amount_added = int(data.get("amount_added", 0))
