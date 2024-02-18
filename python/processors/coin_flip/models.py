@@ -17,7 +17,7 @@ class CoinFlipEvent(Base):
     __table_args__ = ({"schema": COIN_FLIP_SCHEMA_NAME},)
 
     sequence_number: BigIntegerPrimaryKeyType
-    creation_number: BigIntegerPrimaryKeyType
+    creation_number: BigIntegerType
     account_address: StringPrimaryKeyType
     prediction: BooleanType
     result: BooleanType
